@@ -4,7 +4,7 @@ from random import choice
 from nltk import pos_tag
 import numpy as np
 from nltk.corpus import wordnet as wn
-
+from warnings import warn
 corpus =[{'1':"Hey hey hey let's go get lunch today?"},
              {'1': 'Hi have you had lunch'},
               {'2':'Did you go home'},
@@ -22,22 +22,37 @@ GRAMMAR = """S -> NP VP
           VP -> Vintr
           PP -> P NP 
           """
-def getSimilarWords(word, pos='VB'):
+def getSimilarWords(sentence, pos='VB'):
     ttb = TrainTieBot()
-    similarNouns = {}
-    tokenDict = [ttb.tokenize(x) for x in corpus]
+    similarWords = {}
+    tokenDict = [ttb.tokenize(x) for x in sentence]
     wordFeatures = ttb.getFeaturesByName(tokenDict)
-    for eachTuple in pos_tag(word):
+    for eachTuple in pos_tag(wordFeatures):
         if eachTuple[1].startswith(pos):
             for i, j in enumerate(wn.synsets(eachTuple[0])):
-                similarNouns[eachTuple[0]] = j.lemma_names()
-            return similarNouns
+                similarWords[eachTuple[0]] = j.lemma_names()
+            return similarWords
 
 
-def generateSimilarSentences(sentence, word, pos='NN',  num_of_sentences=5):
+def generateSimilarSentences(sentence, pos='NN',  num_of_sentences=5):
     """ This function generates a similar sentence using the synonyms
     of word
     """
     sentences = []
-    similarwords = getSimilarWords(word, pos)
+    originalSentence = sentence.deepCopy()
+    word_indices = dict()
+    similarWords = getSimilarWords(sentence, pos)
     sentence = sentence.split('')
+    temp = num_of_sentences
+    for word, values in similarWords.iterItems():
+        num_of_sentences = np.min(num_of_sentences, len(values[0]))
+    if temp < num_of_sentences:
+        warn('Number of available sentences is less than %s', temp)
+    for eachWord in similarWords:
+        word_indices[eachWord] = sentence.index(eachWord)
+        count = 0
+        while (count < num_of_sentences):
+            newSentence = sentence
+
+
+

@@ -7,11 +7,11 @@ from nltk.corpus import wordnet as wn
 from warnings import warn
 import copy
 
-corpus =[{'1':"blue is greener than purple for sure"},
-             {'2': 'I said this to my friend randomly and she was like what! So funny!'},
-              {'3':'hahahahah thats so super funny! :D made me laugh so hard! I love this'},
-              {'3':'Laugh out loud totally awesome, whoever came up with that must be really clever. Im seriously still loling Im gonna use this'},
-              {'4':'The boys in my class always say that'}]
+corpus =[{'1':"How to perform PCA Test"},
+             {'2': 'What is an App Server?'},
+              {'3':'What is Command Center'},
+              {'3':'How do I generate SeedFiles'},
+              {'4':'How to install RadioShop'}]
 
 query = ['are you going home']
 
@@ -24,7 +24,7 @@ GRAMMAR = """S -> NP VP
           VP -> Vintr
           PP -> P NP 
           """
-def getSimilarWords(sentence, pos='NN'):
+def getSimilarWords(sentence, pos):
     ttb = TrainTieBot()
     similarWords = {}
     tokenDict = ttb.tokenize(sentence)
@@ -36,7 +36,7 @@ def getSimilarWords(sentence, pos='NN'):
             return similarWords, tokenDict.values()[0]
 
 
-def generateSimilarSentences(sentence, pos='NN',  num_of_sentences=5):
+def generateSimilarSentences(sentence, pos,  num_of_sentences=5):
     """ This function generates similar sentences using the synonyms
     of word depending on the part of speech passed
     The sentence argument must be a dict object.
@@ -75,13 +75,19 @@ def generateSimilarSentences(sentence, pos='NN',  num_of_sentences=5):
             count += 1
     return sentences
 
-sentences = []
-for eachWord in corpus:
-    x = generateSimilarSentences(eachWord)
-    if x != []:
-        sentences.extend(generateSimilarSentences(eachWord))
 
-if sentences is not None:
-    for sent in sentences:
-        print sent
-print len(sentences)
+def printSentences(sentences):
+    if (sentences == []) or (sentences is None):
+        pass
+    elif len(sentences) > 1:
+        for sent in sentences:
+            printSentences(sent)
+    else:
+        print sentences
+
+for eachWord in corpus:
+    pos = 'V'
+    x = generateSimilarSentences(eachWord, pos)
+    printSentences(x)
+
+

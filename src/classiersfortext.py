@@ -1,6 +1,7 @@
 
 import numpy as np
 import pandas as pd
+from dnn import DNN
 from nltk.tokenize import RegexpTokenizer
 from sklearn.svm import SVC
 from sklearn.multiclass import OneVsOneClassifier
@@ -32,6 +33,7 @@ class Corpus:
             self.corpus = corpus
         else:
             raise ('Corpus must be a list object')
+        self.expandedSentences = []
 
     def updateCorpus(self, data):
         try:
@@ -56,6 +58,9 @@ class Corpus:
 
     def getClasses(self):
         return list(set([int(x.keys()[0]) for x in self.corpus]))
+
+    def getCorpus(self):
+        return self.corpus
 
     def getSimilarWords(self, sentence, pos='NN'):
         ttb = TrainTieBot()
@@ -105,14 +110,24 @@ class Corpus:
                 count += 1
         return sentences
 
-    def getExpandedSentences(self, corpus):
-        sentences = []
-        for eachWord in corpus:
-            x = self.generateSimilarSentences(eachWord)
-            if x != []:
-                sentences.extend(x)
+    def saveSentences(self, sentences, printSentence=False):
+        if (sentences == []) or (sentences is None):
+            pass
+        elif len(sentences) > 1:
+            for sent in sentences:
+                self.saveSentences(sent)
+        else:
+            if printSentence:
+                print sentences
+            self.expandedSentences.append(sentences)
 
-        return sentences
+    def getExpandedSentences(self, corpus):
+        for eachWord in corpus:
+            pos = 'V'
+            x = self.generateSimilarSentences(eachWord, pos)
+            self.saveSentences(x)
+        return self.expandedSentences
+
 
 class SVMClassifier:
 
@@ -289,30 +304,50 @@ class TrainTieBot:
             raise (TrainTieBotException('Create Bag of Words vectors before fitting it to a new query.'))
         return [query.count(item) if item in query else 0 for item in self.wordFeatures]
 
-    def run(self, corpus, query):
-        corpus = self.tokenize(corpus)
-        corpus = self.BOW(corpus)
-        vectorize_corpus, vectorizer = self.vectorize(corpus)
-        vectorize_query = vectorizer.transform(query).toarray()
-        Y = range(0, vectorize_corpus.shape[0])
-        clf = self.LogisticRegClassifier(vectorize_corpus, Y)
-        print clf.predict(vectorize_query)
+    def list2df(self, data):
+        data = {}
+        data["sentence"] = []
+        data["y"] = []
+        for item in data:
+            data["sentence"].append(data.values()[0])
+            data["y"].append(int(data.keys()[0]))
+        return pd.DataFrame.from_dict(data)
 
-    def sigmoidDerivative(self, X):
-        return X*(1-X)
+    def runDNN(self, corpus, query):
+        corpus = np.asarray(corpus)
+        np.random.shuffle(corpus)
+        corpusTrain = corpus
+        corpusTest = np.asarray(query)
+        corpusTrain = self.list2df(corpusTrain)
+        corpusTest = self.list2df(corpusTest)
+        dnnObject = DNN(pd_df_train=corpusTrain,
+                        pd_df_test=corpusTest,
+                        learning_rate=0.1,
+                        hidden_units_size=[100, 100])
+        dnnObject.run()
+
+    def runSvm(self, corpus, query):
+        pass
+
+    def runLR(self, corpus, query):
+        pass
 
 
 def main():
     corpus =[{'1':"Hey hey hey let's go get lunch today?"},
-             {'1': 'Hi have you had lunch'},
-              {'2':'Did you go home'},
-              {'3':'Hey!!! I need a favor'},
-              {'4':'Hey lets go get a drink tonight'}]
-    query = ['are you going home']
-    #svmc = TrainTieBot()
-    #svmc.BOW(corpus)
-    #print svmc.BOWFit('When do you go home')
+             {'1':'Hi have you had lunch'},
+             {'2':'Did you go home'},
+             {'3':'Hey!!! I need a favor'},
+             {'4':'Hey lets go get a drink tonight'},
+             {'2':'Where is your home located?'},
+             {'3':'Where can I find a favor'},
+             {'4':'Drinks in Atlanta pubs are bad!'},
+             {'1':'Hey did you bring lunch?'},
+             {'4':'The drink is certainly bad'}]
 
+    query = [{'2':'are you going home'}, {'3':'can you do me a favor?'}]
+    tiebot = TrainTieBot()
+    tiebot.runDNN(corpus, query)
 
 if __name__=='__main__':
     main()

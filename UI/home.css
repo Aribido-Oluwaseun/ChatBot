@@ -10,7 +10,7 @@ body {
   max-width: 800px;
   height: 600px;
   font: 15px arial, sans-serif;
-  background-color: white;
+  background-color: #b1f6de;
   border-style: solid;
   border-width: 1px;
   padding-top: 20px;
@@ -20,6 +20,23 @@ body {
   box-shadow: 5px 5px 5px grey;
   border-radius: 15px;
 }
+
+
+#feedback{
+  margin: auto; 
+  max-width: 700px;
+  height: 110px;
+  background-color: #f6f9f6;
+  border-style:solid;
+  box-shadow: 5px 5px 5px grey;
+  border-radius: 15px;
+  border-width: 3px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  padding-right: 5px;
+  padding-left: 5px;
+}
+
 
 #chatborder {
   border-style: solid;
@@ -36,6 +53,7 @@ body {
   border-radius: 15px;
   height: 525px;
 }
+
 
 p #you {
  
@@ -62,8 +80,8 @@ p #bot{
   margin-top: 220px;
    border-radius: 10px;
    border: 2px solid grey;
-  
 }
+
 
 h1 {
   margin: auto;

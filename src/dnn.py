@@ -5,7 +5,7 @@ import numpy as np
 import os
 import pandas as pd
 import re
-import seaborn as sns
+
 
 
 class DNN:
@@ -24,11 +24,6 @@ class DNN:
         self.hidden_units_size = hidden_units_size
         self.learning_rate = learning_rate
 
-    @classmethod
-    def load_data(cls, train_excel, test_excel):
-        train_df = pd.read_excel(train_excel)
-        test_df = pd.read_excel(test_excel)
-        return cls(train_df, test_df)
 
     def run(self):
         # Reduce logging output.

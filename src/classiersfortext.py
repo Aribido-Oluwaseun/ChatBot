@@ -42,6 +42,12 @@ class Corpus:
         except (ValueError, NameError)as err:
             print ('Corpus not updated {}'.format(str(err)))
 
+    @classmethod
+    def load_data(cls, train_excel, test_excel):
+        train_df = pd.read_excel(train_excel)
+        test_df = pd.read_excel(test_excel)
+        return train_df, test_df
+
     def deleteItem(self, item):
         if isinstance(item, str):
             for idx, object in enumerate(self.corpus):
@@ -87,7 +93,7 @@ class Corpus:
         try:
             similarWords, tokens = self.getSimilarWords(newSentence, pos)
         except (TypeError) as err:
-            print('The Part of speech {} is not available'.format(pos))
+            #print('The Part of speech {} is not available'.format(pos))
             return None
         # Note that sentence becomes a string here
         sentences = list()
@@ -117,8 +123,6 @@ class Corpus:
             for sent in sentences:
                 self.saveSentences(sent)
         else:
-            if printSentence:
-                print sentences
             self.expandedSentences.append(sentences)
 
     def getExpandedSentences(self, corpus):
@@ -304,27 +308,53 @@ class TrainTieBot:
             raise (TrainTieBotException('Create Bag of Words vectors before fitting it to a new query.'))
         return [query.count(item) if item in query else 0 for item in self.wordFeatures]
 
-    def list2df(self, data):
+    def list2df(self, data, dataKey, labelKey):
         data = {}
-        data["sentence"] = []
-        data["y"] = []
+        data[dataKey] = []
+        data[labelKey] = []
         for item in data:
-            data["sentence"].append(data.values()[0])
-            data["y"].append(int(data.keys()[0]))
+            data[dataKey].append(data.values()[0])
+            data[labelKey].append(data.keys()[0])
         return pd.DataFrame.from_dict(data)
 
-    def runDNN(self, corpus, query):
-        corpus = np.asarray(corpus)
-        np.random.shuffle(corpus)
-        corpusTrain = corpus
-        corpusTest = np.asarray(query)
-        corpusTrain = self.list2df(corpusTrain)
-        corpusTest = self.list2df(corpusTest)
+    def df2list(self, df, key):
+        df = df[key].to_dict()
+        return [{x : str(df[x])} for x in df.keys()]
+
+    def runDNN(self, query=None, corpus=None,):
+        if corpus is None:
+            train_excel = "/home/girija/Desktop/dev/TieTeam/ChatBot/QandAData.xlsx"
+            test_excel = "/home/girija/Desktop/dev/TieTeam/ChatBot/test_data.xlsx"
+            corpusObj = Corpus()
+            corpusTrain, corpusTest = corpusObj.load_data(train_excel, test_excel)
+            corpusTrain = self.df2list(corpusTrain, 'Question')
+            corpusTest = self.df2list(corpusTest, 'Question')
+            # Expand Vocabulary list with part of speeches
+            corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
+            print corpusTrain
+            corpusTest = corpusObj.getExpandedSentences(corpusTest)
+
+            print "corpus test:"
+            print corpusTest
+            corpusTrain = self.list2df(corpusTrain, 'Question', 'y')
+            corpusTest = self.list2df(corpusTest, 'Question', 'y')
+
+
+
+        else:
+            corpus = np.asarray(corpus)
+            np.random.shuffle(corpus)
+            corpusTrain = corpus
+            corpusTest = np.asarray(query)
+            corpusTrain = self.list2df(corpusTrain)
+            corpusTest = self.list2df(corpusTest)
+
         dnnObject = DNN(pd_df_train=corpusTrain,
                         pd_df_test=corpusTest,
                         learning_rate=0.1,
                         hidden_units_size=[100, 100])
         dnnObject.run()
+
 
     def runSvm(self, corpus, query):
         pass
@@ -347,7 +377,7 @@ def main():
 
     query = [{'2':'are you going home'}, {'3':'can you do me a favor?'}]
     tiebot = TrainTieBot()
-    tiebot.runDNN(corpus, query)
+    tiebot.runDNN()
 
 if __name__=='__main__':
     main()

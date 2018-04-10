@@ -18,20 +18,39 @@ function chatbotResponse() {
     botMessage = 'My name is ' + botName;
   }
   else{
-     reader = new ActiveXObject("Scripting.FileSystemObject");
-        var file = reader.OpenTextFile("data2.txt", 1); //ActiveX File Object
-        botMessage = file.ReadAll(); //text contents of file
-        file.Close(); //close file "input stream"
+     //reader = new ActiveXObject("Scripting.FileSystemObject");
+       // var file = reader.OpenTextFile("data2.txt", 1); //ActiveX File Object
+        botMessage = "answer" //text contents of file
+       // file.Close(); //close file "input stream"
              
   }
 }
+function make_JSON_user_message(lastUserMessage) {//serialize data function
+
+  var returnArray = {};
+ 
+    returnArray['user_message'] = lastUserMessage;
+
+  return returnArray;
+}
+
+function make_JSON_answer(userAnswer) {//serialize data function
+
+  var returnArray = {};
+ 
+    returnArray['user_message'] = lastUserMessage;
+
+  return returnArray;
+}
+
+
 function write_to_file()
 {
 var fso = new ActiveXObject("Scripting.FileSystemObject");
 var s = fso.CreateTextFile("data.txt", true);
 s.WriteLine(lastUserMessage);
 s.Close();
- 
+
 }
 function newEntry() {
   //if the message from the user isn't empty then run
@@ -57,6 +76,9 @@ function newEntry() {
     }
   }
 }
+function print_returnArray(returnArray){
+console.log(returnArray);
+}
 
 //runs the keypress() function when a key is pressed
 document.onkeypress = keyPress;
@@ -68,7 +90,9 @@ function keyPress(e) {
     //runs this function when enter is pressed
  
     newEntry();
- write_to_file();
+ returnArray = make_JSON(lastUserMessage);
+
+
   }
   if (key == 38) {
     console.log('hi')

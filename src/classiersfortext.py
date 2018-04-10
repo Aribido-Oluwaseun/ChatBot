@@ -90,14 +90,15 @@ class Corpus:
         newSentence = copy.deepcopy(sentence)
         similarWords = None
         tokens = None
-        try:
-            similarWords, tokens = self.getSimilarWords(newSentence, pos)
-        except (TypeError) as err:
-            #print('The Part of speech {} is not available'.format(pos))
-            return None
         # Note that sentence becomes a string here
         sentences = list()
         word_indices = dict()
+        try:
+            similarWords, tokens = self.getSimilarWords(newSentence, pos)
+        except (TypeError, ValueError) as err:
+            #print('The Part of speech {} is not available'.format(pos))
+            return {sentenceClass: originalSentence}
+
         temp = num_of_sentences
 
         for word, values in similarWords.iteritems():
@@ -106,7 +107,10 @@ class Corpus:
 
         if temp < num_of_sentences:
             warn('Number of available sentences is less than %s', temp)
+
+
         for eachWord in similarWords:
+
             count = 0
             while (count < num_of_sentences):
                 sentence = tokens
@@ -114,6 +118,9 @@ class Corpus:
                 someSentence = ' '.join(sentence)
                 sentences.append({sentenceClass: someSentence})
                 count += 1
+        if sentences == []:
+            print originalSentence
+            sentences.append({sentenceClass: originalSentence})
         return sentences
 
     def saveSentences(self, sentences, printSentence=False):
@@ -131,11 +138,11 @@ class Corpus:
                 print sentences
             self.expandedSentences.append(sentences)
 
-    def getExpandedSentences(self, corpus):
+    def getExpandedSentences(self, corpus, debug=False):
         for eachWord in corpus:
             pos = 'V'
             x = self.generateSimilarSentences(eachWord, pos)
-            self.saveSentences(x, False)
+            self.saveSentences(x, debug)
         return self.expandedSentences
 
 
@@ -342,7 +349,7 @@ class TrainTieBot:
             corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
             corpusTestObj=Corpus()
             corpusTest= corpusTestObj.getExpandedSentences(corpusTest)
-            #print "corpus test:"
+            # #print "corpus test:"
             corpusTrain = self.list2df(corpusTrain, dataKey, labelKey)
             corpusTest = self.list2df(corpusTest, dataKey, labelKey)
 

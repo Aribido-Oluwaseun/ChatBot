@@ -121,15 +121,21 @@ class Corpus:
             pass
         elif len(sentences) > 1:
             for sent in sentences:
-                self.saveSentences(sent)
+                self.saveSentences(sent, printSentence)
+        elif (len(sentences) == 1) and isinstance(sentences, list):
+            if printSentence:
+                print sentences[0]
+            self.expandedSentences.append(sentences[0])
         else:
+            if printSentence:
+                print sentences
             self.expandedSentences.append(sentences)
 
     def getExpandedSentences(self, corpus):
         for eachWord in corpus:
             pos = 'V'
             x = self.generateSimilarSentences(eachWord, pos)
-            self.saveSentences(x)
+            self.saveSentences(x, False)
         return self.expandedSentences
 
 
@@ -309,36 +315,36 @@ class TrainTieBot:
         return [query.count(item) if item in query else 0 for item in self.wordFeatures]
 
     def list2df(self, data, dataKey, labelKey):
-        data = {}
-        data[dataKey] = []
-        data[labelKey] = []
-        for item in data:
-            data[dataKey].append(data.values()[0])
-            data[labelKey].append(data.keys()[0])
-        return pd.DataFrame.from_dict(data)
+        df = {}
+        df[dataKey] = []
+        df[labelKey] = []
+        for obj in data:
+            df[dataKey].append(obj.values()[0])
+            df[labelKey].append(obj.keys()[0])
+        return pd.DataFrame.from_dict(df)
 
     def df2list(self, df, key):
         df = df[key].to_dict()
         return [{x : str(df[x])} for x in df.keys()]
 
-    def runDNN(self, query=None, corpus=None,):
+    def runDNN(self, query=None, corpus=None):
+        dataKey = 'Question'
+        labelKey = 'y'
         if corpus is None:
             train_excel = "/home/girija/Desktop/dev/TieTeam/ChatBot/QandAData.xlsx"
             test_excel = "/home/girija/Desktop/dev/TieTeam/ChatBot/test_data.xlsx"
             corpusObj = Corpus()
             corpusTrain, corpusTest = corpusObj.load_data(train_excel, test_excel)
-            corpusTrain = self.df2list(corpusTrain, 'Question')
-            corpusTest = self.df2list(corpusTest, 'Question')
+            corpusTrain = self.df2list(corpusTrain, dataKey)
+            corpusTest = self.df2list(corpusTest, dataKey)
+
             # Expand Vocabulary list with part of speeches
             corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
-            print corpusTrain
-            corpusTest = corpusObj.getExpandedSentences(corpusTest)
-
-            print "corpus test:"
-            print corpusTest
-            corpusTrain = self.list2df(corpusTrain, 'Question', 'y')
-            corpusTest = self.list2df(corpusTest, 'Question', 'y')
-
+            corpusTestObj=Corpus()
+            corpusTest= corpusTestObj.getExpandedSentences(corpusTest)
+            #print "corpus test:"
+            corpusTrain = self.list2df(corpusTrain, dataKey, labelKey)
+            corpusTest = self.list2df(corpusTest, dataKey, labelKey)
 
 
         else:
@@ -352,7 +358,9 @@ class TrainTieBot:
         dnnObject = DNN(pd_df_train=corpusTrain,
                         pd_df_test=corpusTest,
                         learning_rate=0.1,
-                        hidden_units_size=[100, 100])
+                        hidden_units_size=[100, 100],
+                        dataKey=dataKey,
+                        labelKey=labelKey)
         dnnObject.run()
 
 

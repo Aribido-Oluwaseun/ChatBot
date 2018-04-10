@@ -14,7 +14,9 @@ class DNN:
                  pd_df_test=None,
                  hidden_units_size=[500, 100],
                  embedded_text_url=None,
-                 learning_rate=0.003):
+                 learning_rate=0.003,
+                 dataKey='Question',
+                 labelKey='y'):
         self.data_train = pd_df_train
         self.data_test = pd_df_test
         if embedded_text_url is None:
@@ -23,7 +25,8 @@ class DNN:
             self.embeded_text_url = embedded_text_url
         self.hidden_units_size = hidden_units_size
         self.learning_rate = learning_rate
-
+        self.dataKey = dataKey
+        self.labelKey = labelKey
 
     def run(self):
         # Reduce logging output.
@@ -32,23 +35,24 @@ class DNN:
 
         # Training input on the whole training set with no limit on training epochs.
         train_input_fn = tf.estimator.inputs.pandas_input_fn(
-        self.data_train, self.data_train["y"], num_epochs=None, shuffle=True)
+        self.data_train, self.data_train[self.labelKey], num_epochs=None, shuffle=True)
 
         # Prediction on the whole training set.
         predict_train_input_fn = tf.estimator.inputs.pandas_input_fn(
-        self.data_train, self.data_train["y"], shuffle=False)
+        self.data_train, self.data_train[self.labelKey], shuffle=False)
         # Prediction on the test set.
         predict_test_input_fn = tf.estimator.inputs.pandas_input_fn(
-        self.data_train, self.data_train["y"], shuffle=False)
+        self.data_train, self.data_train[self.labelKey], shuffle=False)
 
         embedded_text_feature_column = hub.text_embedding_column(
-            key="sentence",
+            key=self.dataKey,
             module_spec=self.embeded_text_url)
-
+        #print self.data_train
+        #print len(np.unique(self.data_train[self.labelKey]))
         estimator = tf.estimator.DNNClassifier(
             hidden_units=self.hidden_units_size,
             feature_columns=[embedded_text_feature_column],
-            n_classes=len(np.unique(self.data_train["y"])),
+            n_classes=len(np.unique(self.data_train[self.labelKey])),
             optimizer=tf.train.AdagradOptimizer(learning_rate=self.learning_rate))
 
         # Training for 1,000 steps means 128,000 training examples with the default

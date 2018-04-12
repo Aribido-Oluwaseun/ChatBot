@@ -10,8 +10,6 @@ from nltk import pos_tag
 from nltk.corpus import wordnet as wn
 from warnings import warn
 import copy
-import json
-
 
 
 class TrainTieBotException(Exception):
@@ -25,6 +23,8 @@ class CorpusException(Exception):
 class NeuralNetException(Exception):
     "Defined NeuralNet Exceptions"
 
+TRAIN_EXCEL = "/home/sbs/Desktop/Dev/ChatBot/QandAData.xlsx"
+TEST_EXCEL = "/home/sbs/Desktop/Dev/ChatBot/test_data.xlsx"
 
 class Corpus:
 
@@ -69,15 +69,17 @@ class Corpus:
         return self.corpus
 
     def getSimilarWords(self, sentence, pos='NN'):
+        sentClass = sentence.keys()[0]
         ttb = TrainTieBot()
         similarWords = {}
         tokenDict = ttb.tokenize(sentence)
-        wordFeatures = ttb.getFeaturesByName(tokenDict.values())
+
+        wordFeatures = ttb.getFeaturesByName([{sentClass: tokenDict}])
         for eachTuple in pos_tag(wordFeatures):
             if eachTuple[1].startswith(pos):
                 for i, j in enumerate(wn.synsets(eachTuple[0])):
                     similarWords[str(eachTuple[0])] = [str(x) for x in j.lemma_names()]
-                return similarWords, tokenDict.values()[0]
+                return similarWords, tokenDict
 
     def generateSimilarSentences(self, sentence, pos='NN', num_of_sentences=5):
         """ This function generates similar sentences using the synonyms
@@ -90,9 +92,11 @@ class Corpus:
         newSentence = copy.deepcopy(sentence)
         similarWords = None
         tokens = None
+
         # Note that sentence becomes a string here
         sentences = list()
         word_indices = dict()
+
         try:
             similarWords, tokens = self.getSimilarWords(newSentence, pos)
         except (TypeError, ValueError) as err:
@@ -119,7 +123,6 @@ class Corpus:
                 sentences.append({sentenceClass: someSentence})
                 count += 1
         if sentences == []:
-            print originalSentence
             sentences.append({sentenceClass: originalSentence})
         return sentences
 
@@ -154,13 +157,11 @@ class SVMClassifier:
 
     def train(self):
         return OneVsOneClassifier(SVC(
-            C=1, cache_size=400, coef0=0.0,
+            C=0.75, cache_size=400, coef0=0.0,
             degree=5, gamma='auto', kernel='rbf',
             max_iter=-1, shrinking=True,
             tol=.01, verbose=False), -1).fit(self.X, self.y)
 
-    def __call__(self):
-        self.train()
 
 
 class LogisticRegClassifier:
@@ -172,8 +173,6 @@ class LogisticRegClassifier:
     def train(self):
         return LogisticRegression().fit(self.X, self.y)
 
-    def __call__(self):
-        self.train()
 
 
 class NeuralNet:
@@ -193,85 +192,8 @@ class NeuralNet:
     def sigmoidDerv(self, x):
         return x*(1-x)
 
-    def train(self, X, y, hidden_neurons=50, alpha=1, epochs=10000, dropout=False, dropout_percent=0.5):
-        print ("Training with %s neurons, alpha:%s, dropout:%s %s" % (
-        hidden_neurons, str(alpha), dropout, dropout_percent if dropout else ''))
-        print ("Input matrix: %sx%s    Output matrix: %sx%s" % (len(X), len(X[0]), 1, len(0)))
-        np.random.seed(1)
-        output = np.zeros([1, len(y)])
-        last_mean_error = 1
-        # randomly initialize our weights with mean 0
-        W_0 = 2 * np.random.random((len(X[0]), hidden_neurons)) - 1
-        W_1 = 2 * np.random.random((hidden_neurons, len(output))) - 1
-
-        prev_W_0_weight_update = np.zeros_like(W_0)
-        prev_W_1_weight_update = np.zeros_like(W_1)
-
-        W_0_direction_count = np.zeros_like(W_0)
-        W_1_direction_count = np.zeros_like(W_1)
-
-        for j in iter(range(epochs + 1)):
-
-            # Feed forward through layers 0, 1, and 2
-            l_0 = X
-            l_1 = self.sigmoid(np.dot(l_0, W_0))
-
-            if (dropout):
-                l_1 *= np.random.binomial([np.ones((len(X), hidden_neurons))], 1 - dropout_percent)[0] * (
-                            1.0 / (1 - dropout_percent))
-
-            l_2 = self.sigmoid(np.dot(l_1, W_1))
-
-            # how much did we miss the target value?
-            l_2_error = y - l_2
-
-            if (j % int(epochs/5)) == 0 and j > epochs/10:
-                # if this zzz iteration's error is greater than the last iteration, break out
-                if np.mean(np.abs(l_2_error)) < last_mean_error:
-                    print ("delta after " + str(j) + " iterations:" + str(np.mean(np.abs(l_2_error))))
-                    last_mean_error = np.mean(np.abs(l_2_error))
-                else:
-                    print ("break:", np.mean(np.abs(l_2_error)), ">", last_mean_error)
-                    break
-
-            # in what direction is the target value?
-            # were we really sure? if so, don't change too much.
-            layer_2_delta = l_2_error * self.sigmoidDerv(l_2)
-
-            # how much did each l1 value contribute to the l2 error (according to the weights)?
-            layer_1_error = layer_2_delta.dot(W_1.T)
-
-            # in what direction is the target l1?
-            # were we really sure? if so, don't change too much.
-            layer_1_delta = layer_1_error * self.sigmoidDerv(l_1)
-
-            W_1_weight_update = (l_1.T.dot(layer_2_delta))
-            W_0_weight_update = (l_0.T.dot(layer_1_delta))
-
-            if (j > 0):
-                W_0_direction_count += np.abs(
-                    ((W_0_weight_update > 0) + 0) - ((prev_W_0_weight_update > 0) + 0))
-                W_1_direction_count += np.abs(
-                    ((W_1_weight_update > 0) + 0) - ((prev_W_1_weight_update > 0) + 0))
-
-            W_1 += alpha * W_1_weight_update
-            W_0 += alpha * W_0_weight_update
-
-            prev_W_0_weight_update = W_0_weight_update
-            prev_W_1_weight_update = W_1_weight_update
-
-        # persist synapses
-        synapse = {'W0': W_0.tolist(), 'W1': W_1.tolist(),
-                   'classes': output
-                   }
-        synapse_file = "synapses.json"
-
-        with open(synapse_file, 'w') as outfile:
-            json.dump(synapse, outfile, indent=4, sort_keys=True)
-        print ("saved synapses to:", synapse_file)
-
-
 class TrainTieBot:
+
     def __init__(self):
         self.bagOfWords = None
         self.wordFeatures = None
@@ -279,12 +201,12 @@ class TrainTieBot:
     def tokenize(self, corpus):
         if not isinstance(corpus, dict):
             raise(TrainTieBotException('Corpus must be of type:dict()'))
-        # tokenize each sentence
+        # # tokenize each sentence
+
         tokenizer = RegexpTokenizer(r'\w+')
-        for word in corpus:
-            corpus[word] = corpus[word].lower()
-            corpus[word] = tokenizer.tokenize(corpus[word])
-        return corpus
+        token = [str(x) for x in tokenizer.tokenize(corpus.values()[0].lower())]
+        return token
+
 
     def cleanUpQuery(self, sentence):
         tokenizer = RegexpTokenizer(r'\w+')
@@ -292,19 +214,18 @@ class TrainTieBot:
         return tokenizer.tokenize(sentence)
 
     def getFeaturesByName(self, corpus):
+        words = list()
         if not isinstance(corpus, list):
             raise(TrainTieBotException('Corpus must be of type:list()'))
-        newCorpus = list()
-        for eachList in corpus:
-            newCorpus.extend(eachList)
-        corpus = newCorpus
-        self.wordFeatures = list(set(corpus))
+        for x in corpus:
+            words.extend(x.values()[0])
+        self.wordFeatures = list(set(words))
         return self.wordFeatures
 
     def BOW(self, corpus):
         if not isinstance(corpus, list):
             raise(TrainTieBotException('Corpus must be of type:list()'))
-        tokenDict = [self.tokenize(x) for x in corpus]
+        tokenDict = [{x.keys()[0]: self.tokenize(x)} for x in corpus]
         getWordFeatures = self.getFeaturesByName(tokenDict)
         vectorDataFrame = pd.DataFrame(data=np.zeros([len(corpus), len(getWordFeatures)]).astype(int))
         # add a label column
@@ -319,7 +240,12 @@ class TrainTieBot:
     def BOWFit(self, query):
         if self.bagOfWords is None:
             raise (TrainTieBotException('Create Bag of Words vectors before fitting it to a new query.'))
-        return [query.count(item) if item in query else 0 for item in self.wordFeatures]
+        tokenDict = [{x.keys()[0]: self.tokenize(x)} for x in query]
+        arrayFitDf = pd.DataFrame(data=np.zeros([len(tokenDict), len(self.wordFeatures)])).astype(int)
+        arrayFitDf['y'] = [x.keys()[0] for x in query]
+        for i in range(len(query)):
+            arrayFitDf.iloc[i, :-1] = [query[i].values()[0].count(item) if item in query[i].values()[0] else 0 for item in self.wordFeatures]
+        return arrayFitDf
 
     def list2df(self, data, dataKey, labelKey):
         df = {}
@@ -330,21 +256,16 @@ class TrainTieBot:
             df[labelKey].append(obj.keys()[0])
         return pd.DataFrame.from_dict(df)
 
-    def df2list(self, df, key):
-        df = df[key].to_dict()
-        return [{x : str(df[x])} for x in df.keys()]
+    def df2list(self, df, dataKey, labelKey):
+        df = df[[dataKey, labelKey]]
+        return [{df[labelKey][x]:df[dataKey][x]} for x in range(df.shape[0])]
 
-    def runDNN(self, query=None, corpus=None):
-        dataKey = 'Question'
-        labelKey = 'y'
+    def prepareDF(self, query=None, corpus=None, dataKey='Question', labelKey='y'):
         if corpus is None:
-            train_excel = "/home/girija/Desktop/dev/TieTeam/ChatBot/QandAData.xlsx"
-            test_excel = "/home/girija/Desktop/dev/TieTeam/ChatBot/test_data.xlsx"
             corpusObj = Corpus()
-            corpusTrain, corpusTest = corpusObj.load_data(train_excel, test_excel)
-            corpusTrain = self.df2list(corpusTrain, dataKey)
-            corpusTest = self.df2list(corpusTest, dataKey)
-
+            corpusTrain, corpusTest = corpusObj.load_data(TRAIN_EXCEL, TEST_EXCEL)
+            corpusTrain = self.df2list(corpusTrain, dataKey, labelKey)
+            corpusTest = self.df2list(corpusTest, dataKey, labelKey)
             # Expand Vocabulary list with part of speeches
             corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
             corpusTestObj=Corpus()
@@ -352,8 +273,6 @@ class TrainTieBot:
             # #print "corpus test:"
             corpusTrain = self.list2df(corpusTrain, dataKey, labelKey)
             corpusTest = self.list2df(corpusTest, dataKey, labelKey)
-
-
         else:
             corpus = np.asarray(corpus)
             np.random.shuffle(corpus)
@@ -361,21 +280,58 @@ class TrainTieBot:
             corpusTest = np.asarray(query)
             corpusTrain = self.list2df(corpusTrain)
             corpusTest = self.list2df(corpusTest)
+        return corpusTrain, corpusTest
 
+    def getXandY(self, corpus=None, query=None):
+        corpusObj = Corpus()
+        dataKey = 'Question'
+        labelKey = 'y'
+        corpusTrain, corpusTest = corpusObj.load_data(TRAIN_EXCEL, TEST_EXCEL)
+        corpusTrain = self.df2list(corpusTrain, dataKey, labelKey)
+        corpusTest = self.df2list(corpusTest, dataKey, labelKey)
+        #corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
+        corpusTestObj = Corpus()
+        #corpusTest = corpusTestObj.getExpandedSentences(corpusTest)
+        BOWTrain = self.BOW(corpusTrain)
+        BOWTest = self.BOWFit(corpusTest)
+
+        X = BOWTrain.iloc[:, :-1]
+        y = BOWTrain['y']
+        X_test = BOWTest.iloc[:, :-1]
+        y_test = BOWTest['y']
+        return X, y, X_test, y_test
+
+    def runDNN(self, learningRate=0.01, hiddenUnitSize=[250, 100], dataKey='Question', labelKey='y'):
+        corpusTrain, corpusTest = self.prepareDF()
         dnnObject = DNN(pd_df_train=corpusTrain,
                         pd_df_test=corpusTest,
-                        learning_rate=0.1,
-                        hidden_units_size=[100, 100],
+                        learning_rate=learningRate,
+                        hidden_units_size=hiddenUnitSize,
                         dataKey=dataKey,
                         labelKey=labelKey)
         dnnObject.run()
 
+    def runSVM(self, corpus=None, query=None):
+        X, y, X_test, y_test = self.getXandY()
+        svm = SVMClassifier(X, y)
+        clf = svm.train()
+        y_pred = clf.predict(X)
+        y_test_pred = clf.predict(X_test)
+        result1 = float(sum((y == y_pred) + 0)) / y_pred.shape[0]
+        result2 = float(sum((y_test == y_test_pred) + 0)) / y_test_pred.shape[0]
+        print 'SVM Training set accuracy: ', result1
+        print 'SVM Test set accuracy: ', result2
 
-    def runSvm(self, corpus, query):
-        pass
-
-    def runLR(self, corpus, query):
-        pass
+    def runLR(self, corpus=None, query=None):
+        X, y, X_test, y_test = self.getXandY()
+        lr = LogisticRegClassifier(X, y)
+        clf = lr.train()
+        y_pred = clf.predict(X)
+        y_test_pred = clf.predict(X_test)
+        result1 = float(sum((y == y_pred) + 0))/y_pred.shape[0]
+        result2 = float(sum((y_test == y_test_pred) + 0))/y_test_pred.shape[0]
+        print 'LR Training set accuracy: ', result1
+        print 'LR Test set accuracy: ', result2
 
 
 def main():
@@ -391,7 +347,10 @@ def main():
              {'4':'The drink is certainly bad'}]
 
     query = [{'2':'are you going home'}, {'3':'can you do me a favor?'}]
+
     tiebot = TrainTieBot()
+    tiebot.runLR()
+    tiebot.runSVM()
     tiebot.runDNN()
 
 if __name__=='__main__':

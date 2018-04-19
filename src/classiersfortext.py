@@ -2,6 +2,9 @@
 import numpy as np
 import pandas as pd
 from dnn import DNN
+import restoreModel
+from flask import Flask, render_template
+from flask import sessions
 from nltk.tokenize import RegexpTokenizer
 from sklearn.svm import SVC
 from sklearn.multiclass import OneVsOneClassifier
@@ -10,6 +13,7 @@ from nltk import pos_tag
 from nltk.corpus import wordnet as wn
 from warnings import warn
 import copy
+
 
 
 class TrainTieBotException(Exception):
@@ -43,10 +47,9 @@ class Corpus:
             print ('Corpus not updated {}'.format(str(err)))
 
     @classmethod
-    def load_data(cls, train_excel, test_excel):
-        train_df = pd.read_excel(train_excel)
-        test_df = pd.read_excel(test_excel)
-        return train_df, test_df
+    def load_data(cls, dataLoaction):
+        df = pd.read_excel(dataLoaction)
+        return df
 
     def deleteItem(self, item):
         if isinstance(item, str):
@@ -260,27 +263,21 @@ class TrainTieBot:
         df = df[[dataKey, labelKey]]
         return [{df[labelKey][x]:df[dataKey][x]} for x in range(df.shape[0])]
 
-    def prepareDF(self, query=None, corpus=None, dataKey='Question', labelKey='y'):
+    def prepareDF(self, query=None, corpus=None, dataKey='Question', labelKey='y', excelLocation=None):
         if corpus is None:
             corpusObj = Corpus()
-            corpusTrain, corpusTest = corpusObj.load_data(TRAIN_EXCEL, TEST_EXCEL)
-            corpusTrain = self.df2list(corpusTrain, dataKey, labelKey)
-            corpusTest = self.df2list(corpusTest, dataKey, labelKey)
+            corpusT = corpusObj.load_data(excelLocation)
+            corpusT = self.df2list(corpusT, dataKey, labelKey)
             # Expand Vocabulary list with part of speeches
-            corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
-            corpusTestObj=Corpus()
-            corpusTest= corpusTestObj.getExpandedSentences(corpusTest)
+            corpusT = corpusObj.getExpandedSentences(corpusT)
             # #print "corpus test:"
-            corpusTrain = self.list2df(corpusTrain, dataKey, labelKey)
-            corpusTest = self.list2df(corpusTest, dataKey, labelKey)
+            corpusT = self.list2df(corpusT, dataKey, labelKey)
         else:
-            corpus = np.asarray(corpus)
-            np.random.shuffle(corpus)
-            corpusTrain = corpus
-            corpusTest = np.asarray(query)
-            corpusTrain = self.list2df(corpusTrain)
-            corpusTest = self.list2df(corpusTest)
-        return corpusTrain, corpusTest
+            corpusObj = Corpus()
+            corpusT = corpusObj.getExpandedSentences(corpus)
+            corpusT = self.list2df(corpusT, dataKey, labelKey)
+        return corpusT
+
 
     def getXandY(self, corpus=None, query=None):
         corpusObj = Corpus()
@@ -289,9 +286,9 @@ class TrainTieBot:
         corpusTrain, corpusTest = corpusObj.load_data(TRAIN_EXCEL, TEST_EXCEL)
         corpusTrain = self.df2list(corpusTrain, dataKey, labelKey)
         corpusTest = self.df2list(corpusTest, dataKey, labelKey)
-        #corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
+        corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
         corpusTestObj = Corpus()
-        #corpusTest = corpusTestObj.getExpandedSentences(corpusTest)
+        corpusTest = corpusTestObj.getExpandedSentences(corpusTest)
         BOWTrain = self.BOW(corpusTrain)
         BOWTest = self.BOWFit(corpusTest)
 
@@ -301,15 +298,22 @@ class TrainTieBot:
         y_test = BOWTest['y']
         return X, y, X_test, y_test
 
-    def runDNN(self, learningRate=0.01, hiddenUnitSize=[250, 100], dataKey='Question', labelKey='y'):
-        corpusTrain, corpusTest = self.prepareDF()
+    def runDNNTrain(self, learningRate=0.01, hiddenUnitSize=[50, 100], dataKey='Question', labelKey='y'):
+        corpusTrain = self.prepareDF(excelLocation=TRAIN_EXCEL)
+
         dnnObject = DNN(pd_df_train=corpusTrain,
-                        pd_df_test=corpusTest,
+                        pd_df_test=None,
                         learning_rate=learningRate,
                         hidden_units_size=hiddenUnitSize,
                         dataKey=dataKey,
                         labelKey=labelKey)
-        dnnObject.run()
+        result = dnnObject.run()
+        return result
+
+    def runDNNPredict(self):
+        XTestDf = self.prepareDF(excelLocation=TEST_EXCEL)
+        restoreModel.predict(X_test=XTestDf)
+
 
     def runSVM(self, corpus=None, query=None):
         X, y, X_test, y_test = self.getXandY()
@@ -347,11 +351,12 @@ def main():
              {'4':'The drink is certainly bad'}]
 
     query = [{'2':'are you going home'}, {'3':'can you do me a favor?'}]
-
     tiebot = TrainTieBot()
-    tiebot.runLR()
-    tiebot.runSVM()
-    tiebot.runDNN()
+    #tiebot.runLR()
+    #tiebot.runSVM()
+    #tiebot.runDNNTrain()
+    tiebot.runDNNPredict()
+
 
 if __name__=='__main__':
     main()

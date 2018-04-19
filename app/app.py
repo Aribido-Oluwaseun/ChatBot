@@ -7,13 +7,13 @@ answer="default ans"
 app = Flask(__name__)
 
 @app.route('/')
-def hello_world(): 	
+def start_bot():
+	classiersfortext.main(TRAIN_TIEBOT=True)
 	return render_template('home.html')
 
 @app.route('/question', methods=['POST', 'GET'])
 def print_something():
 	global answer
-	
 	if request.method == 'POST':
 		x=request.form['question']
 		answer=classiersfortext.main(x)

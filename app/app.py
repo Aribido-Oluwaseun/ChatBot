@@ -21,6 +21,11 @@ def print_something():
 	if request.method == 'GET':
 		return answer
 	
+@app.route('/feedback', methods=['POST'])
+def send_feedback():
+	x = request.form['feedback']
+	print x
+	return render_template('home.html')
 
 
 if __name__=='__main__':

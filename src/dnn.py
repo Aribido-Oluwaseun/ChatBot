@@ -5,7 +5,7 @@ import tensorflow as tf
 import tensorflow_hub as hub
 import numpy as np
 import os
-import dill
+
 
 tf.app.flags.DEFINE_integer('training_iteration', 1000,
                             'number of training iterations.')

@@ -26,8 +26,8 @@ class CorpusException(Exception):
 class NeuralNetException(Exception):
     "Defined NeuralNet Exceptions"
 
-TRAIN_EXCEL = "/home/sbs/Desktop/Dev/ChatBot/QandAData.xlsx"
-TEST_EXCEL = "/home/sbs/Desktop/Dev/ChatBot/test_data.xlsx"
+TRAIN_EXCEL = "/home/chatbot-server/Desktop/Dev/ChatBot/QandAData.xlsx"
+TEST_EXCEL = "/home/chatbot-server/Desktop/Dev/ChatBot/test_data.xlsx"
 
 class Corpus:
 
@@ -297,7 +297,7 @@ class TrainTieBot:
         y_test = BOWTest['y']
         return X, y, X_test, y_test
 
-    def runDNNTrain(self, corpus=None, learningRate=0.01, hiddenUnitSize=[50, 100], dataKey='Question', labelKey='y'):
+    def runDNNTrain(self, corpus=None, learningRate=0.01, hiddenUnitSize=[250, 100], dataKey='Question', labelKey='y'):
         if corpus is None:
             corpus = self.prepareDF(excelLocation=TRAIN_EXCEL)
         self.dnnObject = DNN(pd_df_train=corpus,
@@ -336,19 +336,18 @@ class TrainTieBot:
         answer = Corpus().load_data(TRAIN_EXCEL)
         return answer['Answer'][answer_index]
 
-def main(TRAIN_TIEBOT=False, classifer=None):
-    key = 0
-    question = 'how to perform pca test'
+def train():
     tiebot = TrainTieBot()
-    TRAIN_TIEBOT = True
-    if TRAIN_TIEBOT:
-        classifier = tiebot.runDNNTrain()
+    return tiebot.runDNNTrain(), tiebot
+
+def predict(classifier, tiebot, question='Please pass a string'):
+    key = 0
     df = tiebot.prepareDF([{key: question}])
     df = tiebot.dnnObject.create_input_function(df=df)
     result = classifier.predict(input_fn=df)
-    answerIndices = int(list(result)[0]['classes'][0])
+    answerIndices = [int(list(result)[0]['classes'][0])]
     answerIndices = np.bincount(answerIndices)
-    print tiebot.getAnswer(np.argmax(answerIndices))
+    return tiebot.getAnswer(np.argmax(answerIndices))
 
 if __name__=='__main__':
-    main()
+    train()

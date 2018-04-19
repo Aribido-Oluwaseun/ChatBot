@@ -5,7 +5,6 @@ import tensorflow as tf
 import tensorflow_hub as hub
 import numpy as np
 import os
-import dill
 
 tf.app.flags.DEFINE_integer('training_iteration', 1000,
                             'number of training iterations.')
@@ -33,7 +32,7 @@ class DNN:
         self.learning_rate = learning_rate
         self.dataKey = dataKey
         self.labelKey = labelKey
-        self.export_dir_base = "/home/sbs/Desktop/Dev/ChatBot/EstimatorModels"
+        self.export_dir_base = "/home/chatbot-server/Desktop/Dev/ChatBot/EstimatorModels"
         np.random.seed(10)
 
     def serving_input_receiver_fn(self):
@@ -78,14 +77,12 @@ class DNN:
             hidden_units=self.hidden_units_size,
             feature_columns=[embedded_text_feature_column],
             n_classes=len(np.unique(self.data_train[self.labelKey])),
-            optimizer=tf.train.AdagradOptimizer(learning_rate=self.learning_rate),
-            model_dir=self.export_dir_base,
-            config=my_checkpointing_config)
+            optimizer=tf.train.AdagradOptimizer(learning_rate=self.learning_rate))
 
         # Training for 1,000 steps means 128,000 training examples with the default
         # batch size. This is roughly equivalent to 5 epochs since the training dataset
         # contains 25,000 examples.
-        classifier = estimator.train(input_fn=train_input_fn, steps=100)
+        classifier = estimator.train(input_fn=train_input_fn, steps=500)
 
         # Save the training model
         #print('Exporting trained model to', self.export_dir_base)

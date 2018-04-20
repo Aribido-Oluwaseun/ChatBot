@@ -4,6 +4,7 @@ import pandas as pd
 from dnn import DNN
 from flask import Flask, render_template
 from flask import sessions
+from openpyxl import load_workbook
 from nltk.tokenize import RegexpTokenizer
 from sklearn.svm import SVC
 from sklearn.multiclass import OneVsOneClassifier
@@ -26,8 +27,11 @@ class CorpusException(Exception):
 class NeuralNetException(Exception):
     "Defined NeuralNet Exceptions"
 
+
 TRAIN_EXCEL = "/home/chatbot-server/Desktop/Dev/ChatBot/QandAData.xlsx"
 TEST_EXCEL = "/home/chatbot-server/Desktop/Dev/ChatBot/test_data.xlsx"
+MY_EXCEL = "/home/chatbot-server/Desktop/Dev/ChatBot/test_joseph.xlsx"
+
 
 class Corpus:
 
@@ -37,13 +41,48 @@ class Corpus:
         else:
             raise ('Corpus must be a list object')
         self.expandedSentences = []
+        self.dataKey = 'Question'
+        self.respKey = 'Answer'
+        self.labelKey = 'y'
 
-    def updateCorpus(self, data):
+    def updateCorpus(self, question, answer, excel_file):
+        # create a TrainBot object to convert the list to dataframe
+
+        data_df = pd.DataFrame({self.dataKey: question, self.respKey: answer, self.labelKey: 0})
+        print data_df
+        nextRow = self.getLastExcelSheetRow(excel_file)
+        data_df[self.dataKey] = question
+        data_df[self.respKey] = answer
+        data_df[self.labelKey] = nextRow
+        print data_df
+        writer = pd.ExcelWriter(excel_file, engine='openpyxl')
+        book = load_workbook(excel_file)
+        writer.book = book
+
         try:
-            self.corpus.append(data)
+            data_df.to_excel(excel_writer=writer, header=None, sheet_name=self.getSheetName(excel_file), startrow=nextRow,
+                         startcol=0, columns=[self.dataKey, self.respKey, self.labelKey])
+            writer.save()
             return True
-        except (ValueError, NameError)as err:
-            print ('Corpus not updated {}'.format(str(err)))
+        except (NameError, IOError, ValueError) as err:
+            print('Excel file not updated: {}'.format(str(err)))
+            return False
+
+
+    def getLastExcelSheetRow(self, excel_sheet):
+        # read in the whole dataframe
+        wholeDataFrame = self.load_data(excel_sheet)
+        # let's get the last value of the 'y' column to give us an idea of what excel column to insert this feedback
+        # recall that the 'y' column contains sequential data.
+        lastLabelValue = wholeDataFrame[self.labelKey][wholeDataFrame.shape[0]-1] + 2
+        # add 2 values to it to determine the next empty row in the excelsheet. Recall that the first row in the excel
+        # sheet is the title row and the label column begins on the second row with a 0 not 1.
+        return lastLabelValue
+
+    def getSheetName(self, excelFile):
+        xlFile = pd.ExcelFile(excelFile)
+        return str(xlFile.sheet_names[0])
+
 
     @classmethod
     def load_data(cls, dataLoaction):
@@ -349,5 +388,10 @@ def predict(classifier, tiebot, question='Please pass a string'):
     answerIndices = np.bincount(answerIndices)
     return tiebot.getAnswer(np.argmax(answerIndices))
 
+def takeFeedBack(question, answer):
+    corpus = Corpus(list())
+    return corpus.updateCorpus(question, answer, MY_EXCEL)
+
+
 if __name__=='__main__':
-    train()
+    takeFeedBack('What is my name', 'Jonny')

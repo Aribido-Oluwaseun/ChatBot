@@ -25,12 +25,14 @@ def print_something():
 	if request.method == 'GET':
 		return answer
 	
-@app.route('/feedback', methods=['POST'])
+@app.route('/feedback', methods=['POST', 'GET'])
 def send_feedback():
-	x = request.form['feedback']
-	print x
-	return render_template('home.html')
-
+	if request.method == 'POST':
+		question = request.form['question']
+		answer = request.form['feedback']
+		checkFeedbadk = classiersfortext.takeFeedBack(question, answer)
+	if request.method == 'GET':
+		return render_template('home.html')
 
 if __name__=='__main__':
     app.run()

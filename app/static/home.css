@@ -8,7 +8,8 @@ body {
 #bodybox {
   margin: auto;
   max-width: 800px;
-  height: 600px;
+  min-height: 600px;
+  height: auto;
   font: 15px arial, sans-serif;
   background-color: #b1f6de;
   border-style: solid;
@@ -58,15 +59,17 @@ border: 2px solid grey;
   padding-right: 20px;
   padding-left: 15px;
   border-radius: 15px;
-  height: 525px;
+  min-height: 525px;
+  height: auto;
+
 }
 
 
 p #you {
- 
-
    height : 10px;
    display: inline;
+   border: 2px solid black;
+   border-radius: 15px;
    float: left;
    font-weight: bold;
   
@@ -82,7 +85,8 @@ p #bot{
 
 #chatbox {
   font: 17px arial, sans-serif;
-  height: 30px;
+  min-height: 30px;
+  height: auto;
   width: 100%;
   margin-top: 220px;
    border-radius: 10px;

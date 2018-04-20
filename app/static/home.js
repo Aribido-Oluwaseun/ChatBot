@@ -86,6 +86,7 @@ function newEntry() {
 function send_feedback(){
 $.post( "/feedback",{
 feedback:document.getElementById("textbox").value,
+question:lastUserMessage,
 success: function(response){
 }
 });

@@ -67,18 +67,20 @@ function newEntry() {
 
     //sets the chat box to be clear
     document.getElementById("chatbox").value = "";
-    //adds the value of the chatbox to the array messages
-    messages.push("<p id='you'> You  : " + lastUserMessage + "</p><br>");
-    //Speech(lastUserMessage);  //says what the user typed outloud
+    document.getElementById("chatlog").innerHTML += "<p id='you'> You  : " + lastUserMessage + "</p>";
+    document.getElementById("chatlog").innerHTML += "<br>";
+    document.getElementById("chatlog").innerHTML += "<br>";
+    document.getElementById("chatlog").innerHTML += "<br>";
+    document.getElementById("chatlog").innerHTML += "<br>";
     //sets the variable botMessage in response to lastUserMessage
     chatbotResponse();
-    //add the chatbot's name and message to the array messages	
-    messages.push("<p id='bot'>" + botName + ": " + botMessage + "</p>");
-    //outputs the last few array elements of messages to html
-    for (var i = 1; i < 8; i++) {
-      if (messages[messages.length - i])
-        document.getElementById("chatlog" + i).innerHTML = messages[messages.length - i];
-    }
+    document.getElementById("chatlog").innerHTML +="<p id='bot'>" + botName + ": " + botMessage + "</p>";
+    document.getElementById("chatlog").innerHTML += "<br>";
+    document.getElementById("chatlog").innerHTML += "<br>";
+    document.getElementById("chatlog").innerHTML += "<br>";
+    document.getElementById("chatlog").innerHTML += "<br>";
+
+  
   }
 }
 
@@ -98,6 +100,7 @@ function keyPress(e) {
   var x = e || window.event;
   var key = (x.keyCode || x.which);
   if (key == 13 || key == 3) {
+  
     //runs this function when enter is pressed
     newEntry();
   }

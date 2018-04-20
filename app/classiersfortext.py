@@ -26,8 +26,8 @@ class CorpusException(Exception):
 class NeuralNetException(Exception):
     "Defined NeuralNet Exceptions"
 
-TRAIN_EXCEL = "/home/sbs/Desktop/Dev/ChatBot/QandAData.xlsx"
-TEST_EXCEL = "/home/sbs/Desktop/Dev/ChatBot/test_data.xlsx"
+TRAIN_EXCEL = "/home/girija/Desktop/dev/TieTeam/ChatBot/QandAData.xlsx"
+TEST_EXCEL = "/home/girija/Desktop/dev/TieTeam/ChatBot/test_data.xlsx"
 
 class Corpus:
 
@@ -259,6 +259,7 @@ class TrainTieBot:
         return pd.DataFrame.from_dict(df)
 
     def df2list(self, df, dataKey, labelKey):
+        print df
         df = df[[dataKey, labelKey]]
         return [{df[labelKey][x]:df[dataKey][x]} for x in range(df.shape[0])]
 
@@ -347,6 +348,7 @@ def main(TRAIN_TIEBOT=False, classifer=None):
     df = tiebot.dnnObject.create_input_function(df=df)
     result = classifier.predict(input_fn=df)
     answerIndices = int(list(result)[0]['classes'][0])
+    print answerIndices
     answerIndices = np.bincount(answerIndices)
     print tiebot.getAnswer(np.argmax(answerIndices))
 

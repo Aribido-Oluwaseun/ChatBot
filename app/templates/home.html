@@ -2,8 +2,26 @@
 <head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
  <title>TieBot</title>
+<style>
+#buttonload {
+    background-color: #4CAF50; /* Green background */
+    border: none; /* Remove borders */
+    color: white; /* White text */
+    padding: 12px 24px; /* Some padding */
+    font-size: 16px; /* Set a font-size */
+}
+
+/* Add a right margin to each icon */
+.fa {
+    margin-left: -12px;
+    margin-right: 8px;
+}
+</style>
 <script src="static/home.js"></script> 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+window.onload = function(){document.getElementById("buttonload").style.display="none";}
+</script> 
 <script>
 function showField(){
 document.getElementById("textbox").value='';
@@ -30,13 +48,14 @@ x.style.display = "block";
 
       recognition.lang = "en-US";
       recognition.start();
-
       recognition.onresult = function(e) {
+
         document.getElementById('chatbox').value
                                  = e.results[0][0].transcript;
 	var e= $.Event("keypress", {which:13});
 	$("#chatbox").trigger(e);
         recognition.stop();
+        
      
       };
 
@@ -48,42 +67,36 @@ x.style.display = "block";
   }
 </script>
 
-
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <link rel="stylesheet" type="text/css"href="static/home.css">
-<style>
-  .chatbox img {float: right; width: 40px }
-</style>
 </head>
 <body>
+<button id="buttonload">
+  <i class="fa fa-spinner fa-spin"></i>Bot is Training. Please wait..
+</button>
+<p style="display:none" id="progress">Listening.........</p>
+<img src="/static/images/LandisGyr.jpg"  style="float:right" height="60" width="80">
 
-
-<div id='bodybox'> <img src="/static/images/LandisGyr.jpg"  style="float:right" height="60" width="80">
-  <div id='chatborder'>
-    <p id="chatlog7"  class="chatlog">&nbsp;&nbsp;</p>
-    <p id="chatlog6"  class="chatlog">&nbsp;&nbsp;</p>
-    <p id="chatlog5"  class="chatlog">&nbsp;&nbsp;</p>
-    <p id="chatlog4"  class="chatlog">&nbsp;&nbsp;</p>
-    <p id="chatlog3"  class="chatlog">&nbsp;&nbsp;</p>
-    <p id="chatlog2"  class="chatlog">&nbsp;&nbsp;</p>
-    <p id="chatlog1"  class="chatlog">&nbsp;&nbsp;</p>
-<div class="speech">
-   <input style="background-color: #b1f6de" type="text" name="chat" id="chatbox" placeholder="Hi there! Type here to talk to me." onfocus="placeHolder()">
-   <img onclick="startDictation()" src="/static/images/mic2.jpeg"  style="float:right" height="30" width="30"></input>
+<div id='bodybox'>
+<div id="chatborder"> 
+<div id="chatlog"></div>
 </div>
-  </div>
-  <br>
-  <br>
- </div>
+<input style="align: center;background-color: white" type="text" name="chat" id="chatbox" placeholder="Hi there! Type here to talk to me." onfocus="placeHolder()"></input>
+<img id="speak" style="cursor:pointer;float:right;box-shadow: 5px 5px 5px grey;border-radius: 10px;margin-left: 5px" onclick="startDictation()"  src="/static/images/mic.png"  height="30" width="30">
+</div>
+
+
 <br>
 <div id="feedback">
 Was this helpful?
-<button onclick="happy()" style="box-shadow: 3px 3px 3px grey;border-radius: 10px;border: 2px solid black;background-color: #b1f6de">Yes</button>
-<button onclick="showField()" style="box-shadow: 3px 3px 3px grey;border-radius: 10px;border: 2px solid black;background-color: #b1f6de">No</button><br><br>
+<button onclick="happy()" style="box-shadow: 3px 3px 3px grey;border-radius: 10px;border: 2px solid black;background-color: #90d55d">Yes</button>
+<button onclick="showField()" style="box-shadow: 3px 3px 3px grey;border-radius: 10px;border: 2px solid black;background-color: #90d55d">No</button><br><br>
 <div style= "display:none" id="provideFeedback">
 
 Please provide your feedback:-<br>
 <input  id="textbox" type="textedit"></input>
-<button onclick="send_feedback()" style="box-shadow: 3px 3px 3px grey;border-radius: 10px;border: 2px solid black;background-color: #b1f6de">Submit</button>
+<br>
+<button onclick="send_feedback()" style="box-shadow: 3px 3px 3px grey;border-radius: 10px;border: 1px solid grey;background-color: #90d55d">Submit</button>
 </div>
 
 <div style= "display:none" id="happy">

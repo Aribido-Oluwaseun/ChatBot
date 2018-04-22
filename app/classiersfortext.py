@@ -2,9 +2,6 @@
 import numpy as np
 import pandas as pd
 from dnn import DNN
-from flask import Flask, render_template
-from flask import sessions
-from openpyxl import load_workbook
 from nltk.tokenize import RegexpTokenizer
 from sklearn.svm import SVC
 from sklearn.multiclass import OneVsOneClassifier
@@ -17,23 +14,24 @@ import copy
 
 
 class TrainTieBotException(Exception):
-    "Defines error of logistic reg learner"
+    'Defines error of logistic reg learner'
 
 
 class CorpusException(Exception):
-    "Defines error for the Corpus class"
+    'Defines error for the Corpus class'
 
 
 class NeuralNetException(Exception):
-    "Defined NeuralNet Exceptions"
+    'Defined NeuralNet Exceptions'
 
 
-TRAIN_EXCEL = "/home/chatbot-server/Desktop/Dev/ChatBot/QandAData.xlsx"
-TEST_EXCEL = "/home/chatbot-server/Desktop/Dev/ChatBot/test_data.xlsx"
-MY_EXCEL = "/home/chatbot-server/Desktop/Dev/ChatBot/test_joseph.xlsx"
+TRAIN_EXCEL = '/home/sbs/Desktop/Dev/ChatBot/QandAData.xlsx'
+TEST_EXCEL = '/home/sbs/Desktop/Dev/ChatBot/test_data.xlsx'
+MY_EXCEL = '/home/sbs/Desktop/Dev/ChatBot/test_joseph.xlsx'
 
 
 class Corpus:
+    """ This class processes documents fed into our algorithm."""
 
     def __init__(self, corpus=list()):
         if isinstance(corpus, list):
@@ -46,46 +44,59 @@ class Corpus:
         self.labelKey = 'y'
 
     def updateCorpus(self, question, answer, excel_file):
-        # create a TrainBot object to convert the list to dataframe
+        """This function reads the data in the excel sheet, adds a new column to it and
+        re-writes it back to the same excel sheet.
 
-        data_df = pd.DataFrame({self.dataKey: question, self.respKey: answer, self.labelKey: 0})
-        print data_df
-        nextRow = self.getLastExcelSheetRow(excel_file)
-        data_df[self.dataKey] = question
-        data_df[self.respKey] = answer
-        data_df[self.labelKey] = nextRow
-        print data_df
-        writer = pd.ExcelWriter(excel_file, engine='openpyxl')
-        book = load_workbook(excel_file)
-        writer.book = book
+        Input:
+            question: The question column to be added
+            answer: The feedback answer to be provided
+            excel_file: The location of the excel_file to be updated with a feedback
 
+        Returns:
+            True or False depending on whether the file was successfully updated
+        """
+
+        data_df = self.checkExcelFormat(excel_file)
+        data_df.loc[data_df.index.max() + 1] = [question, answer, data_df[data_df.columns[2]][data_df.shape[0]-1]+1]
         try:
-            data_df.to_excel(excel_writer=writer, header=None, sheet_name=self.getSheetName(excel_file), startrow=nextRow,
-                         startcol=0, columns=[self.dataKey, self.respKey, self.labelKey])
+            writer = pd.ExcelWriter(excel_file)
+            data_df.to_excel(excel_writer=writer, index=None)
             writer.save()
             return True
         except (NameError, IOError, ValueError) as err:
             print('Excel file not updated: {}'.format(str(err)))
             return False
 
+    def checkExcelFormat(self, excel_sheet):
+        """This function helps to check that a certain excel_sheet to be processed is in the same
+        header format: [Question, Answer, y]
 
-    def getLastExcelSheetRow(self, excel_sheet):
-        # read in the whole dataframe
-        wholeDataFrame = self.load_data(excel_sheet)
-        # let's get the last value of the 'y' column to give us an idea of what excel column to insert this feedback
-        # recall that the 'y' column contains sequential data.
-        lastLabelValue = wholeDataFrame[self.labelKey][wholeDataFrame.shape[0]-1] + 2
-        # add 2 values to it to determine the next empty row in the excelsheet. Recall that the first row in the excel
-        # sheet is the title row and the label column begins on the second row with a 0 not 1.
-        return lastLabelValue
+        Input:
+            excel_sheet: The excel_sheet whose format is to be checked.
+
+        Returns:
+            a Pandas Dataframe of the content of the excel_sheet
+        """
+
+        content = self.loadData(excel_sheet)
+        headers = [str(x) for x in list(content.columns)] # convert each header into a string
+        for i in [self.dataKey, self.labelKey, self.respKey]:
+            if i not in headers:
+                raise(CorpusException('Excel sheet must have the following header format: Question, Answer, y'))
+        return content
 
     def getSheetName(self, excelFile):
+        """Gets the active excel sheet name
+        """
+
         xlFile = pd.ExcelFile(excelFile)
         return str(xlFile.sheet_names[0])
 
-
     @classmethod
-    def load_data(cls, dataLoaction):
+    def loadData(cls, dataLoaction):
+        """Helps to load the function
+        """
+
         df = pd.read_excel(dataLoaction)
         return df
 
@@ -110,11 +121,19 @@ class Corpus:
         return self.corpus
 
     def getSimilarWords(self, sentence, pos='NN'):
+        """This function helps to get similar words to a word that fits a part of speech in a sentence
+
+        Input:
+            sentence: sentence in which to find a specific part of speech
+            pos: part of speech to find in the sentence
+
+        Returns:
+            the similar words found
+        """
         sentClass = sentence.keys()[0]
         ttb = TrainTieBot()
         similarWords = {}
         tokenDict = ttb.tokenize(sentence)
-
         wordFeatures = ttb.getFeaturesByName([{sentClass: tokenDict}])
         for eachTuple in pos_tag(wordFeatures):
             if eachTuple[1].startswith(pos):
@@ -126,18 +145,22 @@ class Corpus:
         """ This function generates similar sentences using the synonyms
         of word depending on the part of speech passed
         The sentence argument must be a dict object.
+
+        Input:
+            sentence: The sentence for which we seen similar sentences
+            pos: The part of speech for which we seel similar words
+            num_of_sentences: maximum number of sentences we want to generate
         """
+
         assert (isinstance(sentence, dict))
         originalSentence = copy.deepcopy(sentence.values()[0])
         sentenceClass = sentence.keys()[0]
         newSentence = copy.deepcopy(sentence)
         similarWords = None
         tokens = None
-
         # Note that sentence becomes a string here
         sentences = list()
         word_indices = dict()
-
         try:
             similarWords, tokens = self.getSimilarWords(newSentence, pos)
         except (TypeError, ValueError) as err:
@@ -145,17 +168,12 @@ class Corpus:
             return {sentenceClass: originalSentence}
 
         temp = num_of_sentences
-
         for word, values in similarWords.iteritems():
             num_of_sentences = np.min([num_of_sentences, len(values)])
             word_indices[word] = tokens.index(word)
-
         if temp < num_of_sentences:
             warn('Number of available sentences is less than %s', temp)
-
-
         for eachWord in similarWords:
-
             count = 0
             while (count < num_of_sentences):
                 sentence = tokens
@@ -191,6 +209,7 @@ class Corpus:
 
 
 class SVMClassifier:
+    """This class takes in a training matrix and an array of corresponding labels"""
 
     def __init__(self, X, y):
         self.X = X
@@ -204,7 +223,6 @@ class SVMClassifier:
             tol=.01, verbose=False), -1).fit(self.X, self.y)
 
 
-
 class LogisticRegClassifier:
 
     def __init__(self, X, y):
@@ -213,7 +231,6 @@ class LogisticRegClassifier:
 
     def train(self):
         return LogisticRegression().fit(self.X, self.y)
-
 
 
 class NeuralNet:
@@ -225,13 +242,13 @@ class NeuralNet:
             self.y = y
         else:
             raise(NeuralNetException('X must be a pandas data frame'))
-        classes = self.x.index.values
 
     def sigmoid(self, x):
         return 1/(1+np.exp(-x))
 
     def sigmoidDerv(self, x):
         return x*(1-x)
+
 
 class TrainTieBot:
 
@@ -243,11 +260,9 @@ class TrainTieBot:
         if not isinstance(corpus, dict):
             raise(TrainTieBotException('Corpus must be of type:dict()'))
         # # tokenize each sentence
-
         tokenizer = RegexpTokenizer(r'\w+')
         token = [str(x) for x in tokenizer.tokenize(corpus.values()[0].lower())]
         return token
-
 
     def cleanUpQuery(self, sentence):
         tokenizer = RegexpTokenizer(r'\w+')
@@ -304,7 +319,7 @@ class TrainTieBot:
     def prepareDF(self, corpus=None, dataKey='Question', labelKey='y', excelLocation=None):
         if corpus is None:
             corpusObj = Corpus()
-            corpusT = corpusObj.load_data(excelLocation)
+            corpusT = corpusObj.loadData(excelLocation)
             corpusT = self.df2list(corpusT, dataKey, labelKey)
             # Expand Vocabulary list with part of speeches
             corpusT = corpusObj.getExpandedSentences(corpusT)
@@ -317,24 +332,34 @@ class TrainTieBot:
         return corpusT
 
 
-    def getXandY(self, corpus=None, query=None):
-        corpusObj = Corpus()
+    def getX(self, corpus=None):
         dataKey = 'Question'
         labelKey = 'y'
-        corpusTrain, corpusTest = corpusObj.load_data(TRAIN_EXCEL, TEST_EXCEL)
-        corpusTrain = self.df2list(corpusTrain, dataKey, labelKey)
-        corpusTest = self.df2list(corpusTest, dataKey, labelKey)
-        corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
-        corpusTestObj = Corpus()
-        corpusTest = corpusTestObj.getExpandedSentences(corpusTest)
-        BOWTrain = self.BOW(corpusTrain)
-        BOWTest = self.BOWFit(corpusTest)
+        corpusObj = Corpus()
+        if corpus is None:
+            corpusTrain = corpusObj.loadData(TRAIN_EXCEL)
+            corpusTrain = self.df2list(corpusTrain, dataKey, labelKey)
+            corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
+            BOWTrain = self.BOW(corpusTrain)
 
-        X = BOWTrain.iloc[:, :-1]
-        y = BOWTrain['y']
+            X = BOWTrain.iloc[:, :-1]
+            y = BOWTrain.iloc[:, -1]
+        else:
+            corpusTrain = corpusObj.getExpandedSentences(corpus)
+            BOWTrain = self.BOW(corpusTrain)
+            X = BOWTrain.iloc[:, :-1]
+            y = BOWTrain.iloc[:, -1]
+        return X, y
+
+    def gety(self, query):
+        dataKey = 'Question'
+        labelKey = 'y'
+        corpusTestObj = Corpus()
+        corpusTest = corpusTestObj.getExpandedSentences(query)
+        BOWTest = self.BOWFit(corpusTest)
         X_test = BOWTest.iloc[:, :-1]
-        y_test = BOWTest['y']
-        return X, y, X_test, y_test
+        y_test = BOWTest[labelKey]
+        return X_test, y_test
 
     def runDNNTrain(self, corpus=None, learningRate=0.01, hiddenUnitSize=[250, 100], dataKey='Question', labelKey='y'):
         if corpus is None:
@@ -349,49 +374,71 @@ class TrainTieBot:
         return result
 
 
-    def runSVM(self, corpus=None, query=None):
-        X, y, X_test, y_test = self.getXandY()
+    def runSVM(self, corpus=None):
+        X, y = self.getX(corpus)
         svm = SVMClassifier(X, y)
         clf = svm.train()
-        y_pred = clf.predict(X)
-        y_test_pred = clf.predict(X_test)
-        result1 = float(sum((y == y_pred) + 0)) / y_pred.shape[0]
-        result2 = float(sum((y_test == y_test_pred) + 0)) / y_test_pred.shape[0]
-        print 'SVM Training set accuracy: ', result1
-        print 'SVM Test set accuracy: ', result2
+        #y_pred = clf.predict(X)
+        #y_test_pred = clf.predict(X_test)
+        #result1 = float(sum((y == y_pred) + 0)) / y_pred.shape[0]
+        #result2 = float(sum((y_test == y_test_pred) + 0)) / y_test_pred.shape[0]
+        # print 'SVM Training set accuracy: ', result1
+        # print 'SVM Test set accuracy: ', result2
+        return clf
 
     def runLR(self, corpus=None, query=None):
-        X, y, X_test, y_test = self.getXandY()
+        X, y = self.getX(corpus)
         lr = LogisticRegClassifier(X, y)
         clf = lr.train()
-        y_pred = clf.predict(X)
-        y_test_pred = clf.predict(X_test)
-        result1 = float(sum((y == y_pred) + 0))/y_pred.shape[0]
-        result2 = float(sum((y_test == y_test_pred) + 0))/y_test_pred.shape[0]
-        print 'LR Training set accuracy: ', result1
-        print 'LR Test set accuracy: ', result2
+        #y_pred = clf.predict(X)
+        #y_test_pred = clf.predict(X_test)
+        #result1 = float(sum((y == y_pred) + 0))/y_pred.shape[0]
+        #result2 = float(sum((y_test == y_test_pred) + 0))/y_test_pred.shape[0]
+        # print 'LR Training set accuracy: ', result1
+        # print 'LR Test set accuracy: ', result2
+        return clf
 
     def getAnswer(self, answer_index):
-        answer = Corpus().load_data(TRAIN_EXCEL)
+        answer = Corpus().loadData(TRAIN_EXCEL)
         return answer['Answer'][answer_index]
 
-def train():
-    tiebot = TrainTieBot()
-    return tiebot.runDNNTrain(), tiebot
 
-def predict(classifier, tiebot, question='Please pass a string'):
+def train(classier_type='DNN'):
+    tiebot = TrainTieBot()
+    if classier_type == 'DNN':
+        return tiebot.runDNNTrain(), tiebot
+    elif classier_type == 'SVM':
+        return tiebot.runSVM(), tiebot
+    elif classier_type == 'LR':
+        return tiebot.runLR(), tiebot
+    else:
+        raise(TrainTieBotException('Classifier type must be: [DNN, SVM or LR]'))
+
+
+def predict(classifier, tiebot, question='Please pass a string', classifier_type='DNN'):
     key = 0
-    df = tiebot.prepareDF([{key: question}])
-    df = tiebot.dnnObject.create_input_function(df=df)
-    result = classifier.predict(input_fn=df)
-    answerIndices = [int(list(result)[0]['classes'][0])]
-    answerIndices = np.bincount(answerIndices)
+    if classifier_type not in ['DNN', 'SVM', 'LR']:
+        raise(TrainTieBotException('Unknown classier type'))
+    if question == 'Please pass a string':
+        raise(TrainTieBotException('Please pass a question to tiebot to predict'))
+    question = [{key: question}]
+    if classifier_type == 'DNN':
+        df = tiebot.prepareDF(question)
+        df = tiebot.dnnObject.create_input_function(df=df)
+        result = classifier.predict(input_fn=df)
+        answerIndices = [int(list(result)[0]['classes'][0])]
+        answerIndices = np.bincount(answerIndices)
+    else: # exception hanldled already
+        X_test, y_test = tiebot.gety(query=question)
+        result = classifier.predict(X=X_test)
+        answerIndices = np.bincount(result)
     return tiebot.getAnswer(np.argmax(answerIndices))
 
 def takeFeedBack(question, answer):
     corpus = Corpus(list())
-    return corpus.updateCorpus(question, answer, MY_EXCEL)
+    data = corpus.updateCorpus(question, answer, MY_EXCEL)
+    return data
 
-
-if __name__=='__main__':
-    takeFeedBack('What is my name', 'Jonny')
+# if __name__ == '__main__':
+#     classifier, tieObj = train('DNN')
+#     predict(classifier, tieObj, classifier_type='DNN')

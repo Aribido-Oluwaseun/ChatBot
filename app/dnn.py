@@ -56,7 +56,7 @@ class DNN:
 
         # Training input on the whole training set with no limit on training epochs.
         train_input_fn = tf.estimator.inputs.pandas_input_fn(
-        x=self.data_train, y=self.data_train[self.labelKey], num_epochs=None, shuffle=True)
+        x=self.data_train, y=self.data_train[self.labelKey], num_epochs=100, shuffle=True)
 
         # Prediction on the whole training set.
         predict_train_input_fn = tf.estimator.inputs.pandas_input_fn(
@@ -82,7 +82,7 @@ class DNN:
         # Training for 1,000 steps means 128,000 training examples with the default
         # batch size. This is roughly equivalent to 5 epochs since the training dataset
         # contains 25,000 examples.
-        classifier = estimator.train(input_fn=train_input_fn, steps=500)
+        classifier = estimator.train(input_fn=train_input_fn, steps=100)
 
         # Save the training model
         #print('Exporting trained model to', self.export_dir_base)

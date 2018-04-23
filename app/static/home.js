@@ -67,20 +67,19 @@ function newEntry() {
 
     //sets the chat box to be clear
     document.getElementById("chatbox").value = "";
-    document.getElementById("chatlog").innerHTML += "<p id='you'> You  : " + lastUserMessage + "</p>";
+    document.getElementById("chatlog").innerHTML += "<div id='you'> You  : " + lastUserMessage + "</div>";
     document.getElementById("chatlog").innerHTML += "<br>";
     document.getElementById("chatlog").innerHTML += "<br>";
     document.getElementById("chatlog").innerHTML += "<br>";
     document.getElementById("chatlog").innerHTML += "<br>";
     //sets the variable botMessage in response to lastUserMessage
     chatbotResponse();
-    document.getElementById("chatlog").innerHTML +="<p id='bot'>" + botName + ": " + botMessage + "</p>";
+    document.getElementById("chatlog").innerHTML +="<div id='bot'>" + botName + ": " + botMessage + "</div>";
     document.getElementById("chatlog").innerHTML += "<br>";
     document.getElementById("chatlog").innerHTML += "<br>";
     document.getElementById("chatlog").innerHTML += "<br>";
     document.getElementById("chatlog").innerHTML += "<br>";
-
-  
+ 
   }
 }
 

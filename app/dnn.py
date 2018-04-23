@@ -25,7 +25,7 @@ class DNN:
         self.data_train = pd_df_train
         self.data_test = pd_df_test
         if embedded_text_url is None:
-            self.embeded_text_url = "https://tfhub.dev/google/nnlm-en-dim128/1"
+            self.embeded_text_url = "https://tfhub.dev/google/nnlm-en-dim50/1"
         else:
             self.embeded_text_url = embedded_text_url
         self.hidden_units_size = hidden_units_size
@@ -56,7 +56,7 @@ class DNN:
 
         # Training input on the whole training set with no limit on training epochs.
         train_input_fn = tf.estimator.inputs.pandas_input_fn(
-        x=self.data_train, y=self.data_train[self.labelKey], num_epochs=100, shuffle=True)
+        x=self.data_train, y=self.data_train[self.labelKey], num_epochs=None, shuffle=True)
 
         # Prediction on the whole training set.
         predict_train_input_fn = tf.estimator.inputs.pandas_input_fn(
@@ -70,14 +70,16 @@ class DNN:
         #print self.data_train
         #print len(np.unique(self.data_train[self.labelKey]))
         my_checkpointing_config = tf.estimator.RunConfig(
-            save_checkpoints_secs=1,  # Save checkpoints every 20 minutes.
-            keep_checkpoint_max=13,  # Retain the 10 most recent checkpoints.
+            save_checkpoints_secs=10*60,  # Save checkpoints every 20 minutes.
+            keep_checkpoint_max=10,  # Retain the 10 most recent checkpoints.
         )
         estimator = tf.estimator.DNNClassifier(
             hidden_units=self.hidden_units_size,
             feature_columns=[embedded_text_feature_column],
             n_classes=len(np.unique(self.data_train[self.labelKey])),
-            optimizer=tf.train.AdagradOptimizer(learning_rate=self.learning_rate))
+            optimizer=tf.train.AdagradOptimizer(learning_rate=self.learning_rate),
+            dropout=0.3,
+            model_dir=self.export_dir_base, config=my_checkpointing_config)
 
         # Training for 1,000 steps means 128,000 training examples with the default
         # batch size. This is roughly equivalent to 5 epochs since the training dataset

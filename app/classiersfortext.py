@@ -25,9 +25,9 @@ class NeuralNetException(Exception):
     'Defined NeuralNet Exceptions'
 
 
-TRAIN_EXCEL = '/home/sbs/Desktop/Dev/ChatBot/QandAData.xlsx'
-TEST_EXCEL = '/home/sbs/Desktop/Dev/ChatBot/test_data.xlsx'
-MY_EXCEL = '/home/sbs/Desktop/Dev/ChatBot/test_joseph.xlsx'
+TRAIN_EXCEL = '/home/chatbot-server/Desktop/Dev/ChatBot/QandAData.xlsx'
+TEST_EXCEL = '/home/chatbot-server/Desktop/Dev/ChatBot/test_data.xlsx'
+MY_EXCEL = '/home/chatbot-server/Desktop/Dev/ChatBot/test_joseph.xlsx'
 
 
 class Corpus:
@@ -338,8 +338,8 @@ class TrainTieBot:
         corpusObj = Corpus()
         if corpus is None:
             corpusTrain = corpusObj.loadData(TRAIN_EXCEL)
-            corpusTrain = self.df2list(corpusTrain, dataKey, labelKey)
-            corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
+            #corpusTrain = self.df2list(corpusTrain, dataKey, labelKey)
+            #corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
             BOWTrain = self.BOW(corpusTrain)
 
             X = BOWTrain.iloc[:, :-1]
@@ -361,7 +361,7 @@ class TrainTieBot:
         y_test = BOWTest[labelKey]
         return X_test, y_test
 
-    def runDNNTrain(self, corpus=None, learningRate=0.01, hiddenUnitSize=[250, 100], dataKey='Question', labelKey='y'):
+    def runDNNTrain(self, corpus=None, learningRate=0.01, hiddenUnitSize=[64, 128, 128, 64], dataKey='Question', labelKey='y'):
         if corpus is None:
             corpus = self.prepareDF(excelLocation=TRAIN_EXCEL)
         self.dnnObject = DNN(pd_df_train=corpus,
@@ -428,6 +428,7 @@ def predict(classifier, tiebot, question='Please pass a string', classifier_type
         result = classifier.predict(input_fn=df)
         answerIndices = [int(list(result)[0]['classes'][0])]
         answerIndices = np.bincount(answerIndices)
+        print answerIndices
     else: # exception hanldled already
         X_test, y_test = tiebot.gety(query=question)
         result = classifier.predict(X=X_test)

@@ -22,7 +22,7 @@
 
 <script>
 function showField(){
-document.getElementById("textbox").value='';
+document.getElementById("feedback_input").value='';
 document.getElementById("happy").style.display = "none";
 var x = document.getElementById("provideFeedback");
 x.style.display = "block";
@@ -34,6 +34,7 @@ var x = document.getElementById("happy");
 x.style.display = "block";
 }
 </script>
+
 <script>
   function startDictation() {
 
@@ -88,7 +89,7 @@ Was this helpful?
 <div style= "display:none" id="provideFeedback">
 
 Please provide your feedback:-<br>
-<input  id="textbox" type="textedit"></input>
+<input  id="feedback_input" type="text"></input>
 <br>
 <button onclick="send_feedback()" style="box-shadow: 3px 3px 3px grey;border-radius: 10px;border: 1px solid grey;background-color: #90d55d">Submit</button>
 </div>

@@ -1,6 +1,7 @@
-
+import copy
 import numpy as np
 import pandas as pd
+from autocorrect import spell
 from dnn import DNN
 from nltk.tokenize import RegexpTokenizer
 from sklearn.svm import SVC
@@ -8,9 +9,9 @@ from sklearn.multiclass import OneVsOneClassifier
 from sklearn.linear_model import LogisticRegression
 from nltk import pos_tag
 from nltk.corpus import wordnet as wn
+from nltk.corpus import stopwords
 from warnings import warn
-import copy
-
+import unicodedata
 
 
 class TrainTieBotException(Exception):
@@ -25,10 +26,7 @@ class NeuralNetException(Exception):
     'Defined NeuralNet Exceptions'
 
 
-TRAIN_EXCEL = '/home/chatbot-server/Desktop/Dev/ChatBot/QandAData.xlsx'
-TEST_EXCEL = '/home/chatbot-server/Desktop/Dev/ChatBot/test_data.xlsx'
-MY_EXCEL = '/home/chatbot-server/Desktop/Dev/ChatBot/test_joseph.xlsx'
-
+TRAIN_EXCEL = '/home/chatbot-server/Desktop/Dev/ChatBot/chatscript.xlsx'
 
 class Corpus:
     """ This class processes documents fed into our algorithm."""
@@ -42,6 +40,13 @@ class Corpus:
         self.dataKey = 'Question'
         self.respKey = 'Answer'
         self.labelKey = 'y'
+
+    def preprocess(self, sentence):
+        sentence = sentence.lower()
+        tokenizer = RegexpTokenizer(r'\w+')
+        tokens = tokenizer.tokenize(sentence)
+        filtered_words = [w for w in tokens if not w in stopwords.words('english')]
+        return ' '.join(filtered_words)
 
     def updateCorpus(self, question, answer, excel_file):
         """This function reads the data in the excel sheet, adds a new column to it and
@@ -165,7 +170,7 @@ class Corpus:
             similarWords, tokens = self.getSimilarWords(newSentence, pos)
         except (TypeError, ValueError) as err:
             #print('The Part of speech {} is not available'.format(pos))
-            return {sentenceClass: originalSentence}
+            return {sentenceClass: self.preprocess(unicodedata.normalize('NFKD', originalSentence).encode('ascii', 'ignore'))}
 
         temp = num_of_sentences
         for word, values in similarWords.iteritems():
@@ -173,16 +178,21 @@ class Corpus:
             word_indices[word] = tokens.index(word)
         if temp < num_of_sentences:
             warn('Number of available sentences is less than %s', temp)
+        sentences.append(
+            {sentenceClass: self.preprocess(unicodedata.normalize('NFKD', originalSentence).encode('ascii', 'ignore'))})
         for eachWord in similarWords:
             count = 0
             while (count < num_of_sentences):
                 sentence = tokens
                 sentence[word_indices[eachWord]] = str(similarWords[eachWord][count])
                 someSentence = ' '.join(sentence)
-                sentences.append({sentenceClass: someSentence})
+
+                sentences.append({sentenceClass: self.preprocess(someSentence)})
+
                 count += 1
         if sentences == []:
-            sentences.append({sentenceClass: originalSentence})
+            sentences.append(
+                {sentenceClass: self.preprocess(unicodedata.normalize('NFKD', originalSentence).encode('ascii', 'ignore'))})
         return sentences
 
     def saveSentences(self, sentences, printSentence=False):
@@ -338,8 +348,8 @@ class TrainTieBot:
         corpusObj = Corpus()
         if corpus is None:
             corpusTrain = corpusObj.loadData(TRAIN_EXCEL)
-            #corpusTrain = self.df2list(corpusTrain, dataKey, labelKey)
-            #corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
+            corpusTrain = self.df2list(corpusTrain, dataKey, labelKey)
+            corpusTrain = corpusObj.getExpandedSentences(corpusTrain)
             BOWTrain = self.BOW(corpusTrain)
 
             X = BOWTrain.iloc[:, :-1]
@@ -361,9 +371,10 @@ class TrainTieBot:
         y_test = BOWTest[labelKey]
         return X_test, y_test
 
-    def runDNNTrain(self, corpus=None, learningRate=0.01, hiddenUnitSize=[64, 128, 128, 64], dataKey='Question', labelKey='y'):
+    def runDNNTrain(self, corpus=None, learningRate=0.02, hiddenUnitSize=[128, 256, 128], dataKey='Question', labelKey='y'):
         if corpus is None:
             corpus = self.prepareDF(excelLocation=TRAIN_EXCEL)
+
         self.dnnObject = DNN(pd_df_train=corpus,
                         pd_df_test=None,
                         learning_rate=learningRate,
@@ -421,6 +432,7 @@ def predict(classifier, tiebot, question='Please pass a string', classifier_type
         raise(TrainTieBotException('Unknown classier type'))
     if question == 'Please pass a string':
         raise(TrainTieBotException('Please pass a question to tiebot to predict'))
+    question = ' '.join(spell(s) for s in question.split(' '))
     question = [{key: question}]
     if classifier_type == 'DNN':
         df = tiebot.prepareDF(question)
@@ -428,7 +440,7 @@ def predict(classifier, tiebot, question='Please pass a string', classifier_type
         result = classifier.predict(input_fn=df)
         answerIndices = [int(list(result)[0]['classes'][0])]
         answerIndices = np.bincount(answerIndices)
-        print answerIndices
+
     else: # exception hanldled already
         X_test, y_test = tiebot.gety(query=question)
         result = classifier.predict(X=X_test)
@@ -437,7 +449,7 @@ def predict(classifier, tiebot, question='Please pass a string', classifier_type
 
 def takeFeedBack(question, answer):
     corpus = Corpus(list())
-    data = corpus.updateCorpus(question, answer, MY_EXCEL)
+    data = corpus.updateCorpus(question, answer, TRAIN_EXCEL)
     return data
 
 # if __name__ == '__main__':

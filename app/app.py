@@ -1,6 +1,7 @@
 from flask import Flask, render_template
 from flask import request
-import classiersfortext
+from classiersfortext import *
+
 
 answer="default ans"
 app = Flask(__name__)
@@ -14,7 +15,7 @@ def start_bot():
     global tiebot
     global classifier_type
     classifier_type = 'DNN'
-    classifier, tiebot = classiersfortext.train(classifier_type)
+    classifier, tiebot = train(classifier_type)
     return render_template('home.html')
 
 
@@ -23,7 +24,7 @@ def print_something():
     global answer
     if request.method == 'POST':
         x = request.form['question']
-        answer = classiersfortext.predict(classifier=classifier,
+        answer = predict(classifier=classifier,
                                           tiebot=tiebot,
                                           question=x,
                                           classifier_type=classifier_type)
@@ -33,15 +34,19 @@ def print_something():
 
 
 @app.route('/feedback', methods=['POST', 'GET'])
-def send_feedback():
+def feedback():
     if request.method == 'POST':
         question = request.form['question']
         answer = request.form['feedback']
-        checkFeedbadk = classiersfortext.takeFeedBack(question, answer)
-        print 'Feedback ackknoledged'
+	print "post received"
+	print "ans:", answer
+	print "ques", question
+        checkFeedbadk = takeFeedBack(question, answer)
+        print 'Feedback ackknoledged', checkFeedbadk
+	return render_template('home.html')
     if request.method == 'GET':
         return render_template('home.html')
 
 
 if __name__=='__main__':
-    app.run()
+    app.run(host='10.1.152.180', debug=True)

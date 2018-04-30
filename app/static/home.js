@@ -67,29 +67,24 @@ function newEntry() {
 
     //sets the chat box to be clear
     document.getElementById("chatbox").value = "";
-    document.getElementById("chatlog").innerHTML += "<div id='you'> You  : " + lastUserMessage + "</div>";
-    document.getElementById("chatlog").innerHTML += "<br>";
-    document.getElementById("chatlog").innerHTML += "<br>";
-    document.getElementById("chatlog").innerHTML += "<br>";
-    document.getElementById("chatlog").innerHTML += "<br>";
+    document.getElementById("chatlog").innerHTML += "<div id='you'> You  : " + lastUserMessage + "</div><br><br>";
+
     //sets the variable botMessage in response to lastUserMessage
     chatbotResponse();
-    document.getElementById("chatlog").innerHTML +="<div id='bot'>" + botName + ": " + botMessage + "</div>";
-    document.getElementById("chatlog").innerHTML += "<br>";
-    document.getElementById("chatlog").innerHTML += "<br>";
-    document.getElementById("chatlog").innerHTML += "<br>";
-    document.getElementById("chatlog").innerHTML += "<br>";
+    document.getElementById("chatlog").innerHTML +="<div id='bot'>" + botName + ": " + botMessage + "</div><br><br>";
+
  
   }
 }
 
 //send the feedback to backend database
 function send_feedback(){
+console.log(document.getElementById("feedback_input").value);
+console.log(lastUserMessage);
 $.post( "/feedback",{
-feedback:document.getElementById("textbox").value,
-success: function(response){
-}
-});
+	feedback:document.getElementById("feedback_input").value,
+	question:lastUserMessage
+	});
 }
 
 //runs the keypress() function when a key is pressed

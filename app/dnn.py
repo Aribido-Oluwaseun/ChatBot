@@ -25,7 +25,7 @@ class DNN:
         self.data_train = pd_df_train
         self.data_test = pd_df_test
         if embedded_text_url is None:
-            self.embeded_text_url = "https://tfhub.dev/google/nnlm-en-dim50/1"
+            self.embeded_text_url = "https://tfhub.dev/google/nnlm-en-dim128/1"
         else:
             self.embeded_text_url = embedded_text_url
         self.hidden_units_size = hidden_units_size
@@ -78,8 +78,8 @@ class DNN:
             feature_columns=[embedded_text_feature_column],
             n_classes=len(np.unique(self.data_train[self.labelKey])),
             optimizer=tf.train.AdagradOptimizer(learning_rate=self.learning_rate),
-            dropout=0.3,
-            model_dir=self.export_dir_base, config=my_checkpointing_config)
+            dropout=0.25)
+            #model_dir=self.export_dir_base, config=my_checkpointing_config)
 
         # Training for 1,000 steps means 128,000 training examples with the default
         # batch size. This is roughly equivalent to 5 epochs since the training dataset
